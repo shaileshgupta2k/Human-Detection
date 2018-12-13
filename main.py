@@ -1,3 +1,14 @@
+###################################################################
+#
+#	Program Creator: SHAILESH GUPTA
+#	Supervisor:	 Prof. Edward Wong
+#	Date: 	         12-12-2018
+#
+#	Program Written as part of NYU Computer Vision and Scence Analysis
+#	final project: Human Detection
+#
+####################################################################
+
 
 import cv2 
 import sys
@@ -51,19 +62,20 @@ def main():
 class HistogramOfGradients:
 
 	# function to find all the images in a given folder
-	def findImages(self, dataFile, delimeter):
-		PathList = []
-		dataOut = []
+	def findImages(self, file, delimeter):
 
-		for dataFolder in dataFile.keys():
+		path_list = []
+		output_data_list = []
+
+		for dataFolder in file.keys():
 			for directoryName, subDirectory, fileL in os.walk(dataFolder):
-				for imageFile in fileL:
-					imageP = dataFolder + delimeter + imageFile
-					PathList.append(imageP)
+				for imgFile in fileL:
+					imageP = dataFolder + delimeter + imgFile
+					path_list.append(imageP)
 
-					dataOut.append([dataFile[dataFolder]])
+					output_data_list.append([file[dataFolder]])
 
-		return PathList, dataOut
+		return path_list, output_data_list
 
 	# read image from the given path
 	def readImage(self, imagePath):
@@ -326,7 +338,7 @@ class NeuralNetwork:
 
 	# class object initializer 
 	# we are using 300 iterations and 1000 neurons for the hidden layer
-	def __init__(self, graph = (7524, 1000, 1), ep = 200, lr = 0.01):
+	def __init__(self, graph = (7524, 1000, 1), ep = 300, lr = 0.01):
 
 		self.graph = graph
 
@@ -338,7 +350,6 @@ class NeuralNetwork:
 		self.bias1 = np.zeros((graph[1], 1))
 		self.bias2 = np.zeros((graph[2], 1))
 
-
 		self.l1 = self.l2 = None
 
 		self.d_w1 = self.d_w2 = None
@@ -347,26 +358,26 @@ class NeuralNetwork:
 
 
 	# function to implement feed forward algorithm
-	def feedForward(self, trainDataSet):
-		a1 = self.w1.dot(trainDataSet) + self.bias1
-		self.l1 = self.ReLU(a1)
+	def feedForward(self, trainData):
+		activation1 = self.w1.dot(trainData) + self.bias1
+		self.l1 = self.ReLU(activation1)
 		self.l2 = self.sigmoid(self.w2.dot(self.l1) + self.bias2)
 
-	# function to compute error
-	def error(self, actual_output):
-		return 0.5 * np.square(self.l2 - actual_output).sum()
-
 	# function to do backpropagation
-	def backpropagation(self, trainDataSet, actual_output):
+	def backpropagation(self, trainData, actual_output):
 		diff = self.l2 - actual_output
 		z2 = diff * self.dSigmoid(self.l2)
 		self.d_w2 = np.dot(z2, self.l1.T)
 
 		z1 = np.dot(self.w2.T, z2) * self.dReLU(self.l1)
-		self.d_w1 = np.dot(z1, trainDataSet.T)
+		self.d_w1 = np.dot(z1, trainData.T)
 
 		self.d_bias2 = np.sum(z2, axis = 1, keepdims = True)
 		self.d_bias1 = np.sum(z1, axis = 1, keepdims = True)
+
+	# function to compute error
+	def error(self, actual_output):
+		return 0.5 * np.square(self.l2 - actual_output).sum()
 
 	# function to update weights and bias values
 	def update(self):
@@ -376,46 +387,6 @@ class NeuralNetwork:
 		self.w2 = self.w2 - self.lr * self.d_w2
 		self.bias2 = self.bias2 - self.lr * self.d_bias2
 
-
-	# function to train neural network
-	def trainNeuralNetwork(self, input_train_data, output_train_data):
-
-		trainLen = len(input_train_data)
-		for epoch in range(self.ep):
-			epoch_error = 0.0
-			for data_count, train_data in enumerate(input_train_data):
-				self.feedForward(train_data)
-				error = self.error(output_train_data[data_count])
-				epoch_error += error
-				self.backpropagation(train_data, output_train_data[data_count])
-				self.update()
-
-			print("Epoch Count: " + str(epoch), " | Average Error: ", epoch_error/trainLen)
-
-	# function to test neural network
-	def testNeuralNetwork(self, testImages, input_test_data, output_test_out):
-
-		missedClassification = 0
-
-		positiveList = []
-		negativeList = []
-
-		for data_count, test_data in enumerate(input_test_data):
-			self.feedForward(test_data)
-			print("Test Image: " + testImages[data_count] + " | Predicted Probability: " + str(self.l2) + " | Actual Probability: " + str(output_test_out[data_count]))
-
-			cPrediction = np.round(self.l2.sum())
-
-			if cPrediction:
-				positiveList.append([testImages[data_count], str(self.l2.sum())])
-			else:
-				negativeList.append([testImages[data_count], str(self.l2.sum())])
-
-			# finc error in detection
-			missedClassification += (float(cPrediction - output_test_out[data_count]) == 0)
-
-
-		print("Prediction Accuracy: " + str(float(missedClassification) / float(len(output_test_out)) * 100))
 
 	# sigmoid function
 	def sigmoid(self, x):
@@ -431,6 +402,42 @@ class NeuralNetwork:
 	def dReLU(self, t):
 		return 1 * (t > 0)
 
+	# function to train neural network
+	def trainNeuralNetwork(self, input_train_data, output_train_data):
 
+		for ep in range(self.ep):
+			ep_error = 0.0
+			for data_count, train_data in enumerate(input_train_data):
+				self.feedForward(train_data)
+				ep_error = ep_error + self.error(output_train_data[data_count])
+				self.backpropagation(train_data, output_train_data[data_count])
+				self.update()
+
+			print("Epoch Count: " + str(ep), " | Average Error: ", ep_error / len(input_train_data))
+
+	# function to test neural network
+	def testNeuralNetwork(self, testImages, input_test_data, output_test_out):
+
+		positiveList = []
+		negativeList = []
+		missedClassification = 0
+
+		for data_count, test_data in enumerate(input_test_data):
+			self.feedForward(test_data)
+			print("Test Image: " + testImages[data_count] + "\nPredicted Probability: " + str(self.l2) + "\nActual Probability: " + str(output_test_out[data_count]) + "\n")
+
+			prediction = np.round(self.l2.sum())
+			if prediction:
+				positiveList.append([testImages[data_count], str(self.l2.sum())])
+			else:
+				negativeList.append([testImages[data_count], str(self.l2.sum())])
+
+			# find error in detection
+			missedClassification += (float(prediction - output_test_out[data_count]) == 0)
+
+		print("Network Prediction Accuracy: " + str(float(missedClassification) / float(len(output_test_out)) * 100))
+
+
+# point where actual call to start program begins
 if __name__ == "__main__":
 	main()
