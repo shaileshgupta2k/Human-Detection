@@ -1,14 +1,3 @@
-###################################################################
-#
-#	Program Creator: SHAILESH GUPTA
-#	Supervisor:		 Prof. Edward Wong
-#
-#	Program Written as part of Computer Vision and Scence Analysis
-#	final project: Human Detection
-#	Date: 12-12-2018
-#
-####################################################################
-
 
 import cv2 
 import sys
